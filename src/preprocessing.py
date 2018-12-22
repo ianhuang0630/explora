@@ -11,12 +11,13 @@ from scipy.misc import imread
 from cocoapi.PythonAPI.pycocotools.coco import COCO
 from tqdm import tqdm
 import pickle
+import pandas as pd
 
 def process_gaze_data():
      
     pass
 
-def process_sem_annots(coco, imgids):
+def process_sem_annots(coco, imgids, str_imgids, file_prefix, save_dir_path):
     """ Get semantic labels from COCO datastructure
     Inputs:
         coco: COCO datastructure
@@ -27,15 +28,18 @@ def process_sem_annots(coco, imgids):
     """
     sem_labels = []
     print('preparing annotations for images...')
-    for element in tqdm(imgids):
+    if not os.path.exists(save_dir_path):
+        os.makedirs(save_dir_path)
+
+    for i, element in enumerate(tqdm(imgids)):
         this_imgid = coco.getImgIds(imgIds=element)
         img = coco.loadImgs(this_imgid)[0]
-        dims = (img['height'], img['height'])
+        dims = (img['height'], img['width'])
         # loading annotations
         annots_id = coco.getAnnIds(imgIds = this_imgid)
         anns = coco.loadAnns(annots_id)
         # do the following for every category
-        masks = [(coco.annToMask[element], element['category_id']) 
+        masks = [(coco.annToMask(element), element['category_id']) 
                 for element in anns]
         label_masks = [element[0]* element[1] for element in masks]
         # overlay on 0's
@@ -45,8 +49,12 @@ def process_sem_annots(coco, imgids):
             this_mask = label_masks[i].copy()
             this_mask[np.where(canvas != 0)] = 0
             canvas = canvas + this_mask
-        sem_labels.append((img['id'], canvas))
-    return sem_labels
+        # saving 
+        file_name = file_prefix + str_imgids[i] + '.pkl'
+        pickle_path = os.path.join(save_dir_path, file_name)
+        pickle.dump(canvas , open(pickle_path, 'wb'))    
+        sem_labels.append(pickle_path)
+    return sem_labels  
 
 if __name__ == '__main__':
     
@@ -64,6 +72,8 @@ if __name__ == '__main__':
     # save locations for semantic labeling
     semantic_train_path = '../data/sem_train'
     semantic_val_path = '../data/sem_val'
+    train_aggregate_paths_loc = '../data/train_rgb_gaze_sem.csv'
+    val_aggregate_paths_loc = '../data/val_rgb_gaze_sem.csv'
 
     # process labels
     # TODO: scan for certain classes: dogs and cats?
@@ -87,53 +97,62 @@ if __name__ == '__main__':
     train_img_paths = []
     print('Processing paths for training images')
     for element in tqdm(train_img_ids):
-        imgpath = os.path.join(img_path, train_prefix + train_img_ids + '.jpg')
+        imgpath = os.path.join(img_path, train_prefix + element + '.jpg')
         assert os.path.exists(imgpath), '{} does not exist'.format(imgpath)
         train_img_paths.append(imgpath)
     
     print('Processing paths for training images')
     val_img_paths = []
     for element in tqdm(val_img_ids):
-        imgpath = os.path.join(img_path, val_prefix + val_img_ids + '.jpg')
-        assert os.path.exists(imgpath). '{} does not exist'.format(imgpath)
+        imgpath = os.path.join(img_path, val_prefix + element + '.jpg')
+        assert os.path.exists(imgpath), '{} does not exist'.format(imgpath)
         val_img_paths.append(imgpath)
     
     ## 2) get the gaze data
-     
+    train_gaze_paths = []
+    for element in tqdm(train_img_ids):
+        imgpath = os.path.join(saliency_train_path, train_prefix + element + '.png')
+        assert os.path.exists(imgpath), '{} does not exist'.format(imgpath)
+        train_gaze_paths.append(imgpath)
+
+    val_gaze_paths = []
+    for element in tqdm(val_img_ids):
+        imgpath = os.path.join(saliency_val_path, val_prefix + element + '.png')
+        assert os.path.exists(imgpath), '{} does not exist'.format(imgpath)
+        val_gaze_paths.append(imgpath)
 
     ## 3) get the segmentation data
     int_id_train = [int(element) for element in train_img_ids]
     int_id_val = [int(element) for element in val_img_ids]
-    sem_train = process_sem_annots(coco_train, int_id_train) 
-    sem_val = process_sem_annots(coco_val, int_id_val) 
-    
-    # now save to file
-    train_sem_loc = []
-    if not os.path.exist(semantic_train_path):
-        os.makedirs(semantic_train_path)
-    print('Saving the semantic labelings in .pkl under semantic_train folder...')
-    for i in tqdm(range(len(sem_train))):
-        # dump the data
-        sem_label_mat = sem_train[i][1]
-        file_name = train_prefix + train_img_ids[i] + '.pkl'
-        pickle_path = os.path.join(semantic_train_path, file_name)
-        pickle.dump(sem_label_mat, open(pickle_path, 'wb'))    
-        train_sem_loc.append(pickle_path)
-         
-    val_sem_loc = []
-    if not os.path.exist(semantic_val_path):
-        os.makedirs(semantic_val_path)
-    print('Saving the semantic labelings in .pkl under semantic_val folder...')
-    for i in tqdm(range(len(sem_val))):
-        # dump the data
-        sem_label_mat = sem_val[i][1]
-        file_name = val_prefix + val_img_ids[i] + '.pkl'
-        pickle_path = os.path.join(semantic_val_path, file_name)
-        pickle.dump(sem_label_mat, open(pickle_path, 'wb'))    
-        val_sem_loc.append(pickle_path)
-    
-    
+    train_sem_paths  = process_sem_annots(coco_train, int_id_train, 
+            train_img_ids, train_prefix, semantic_train_path) 
+    val_sem_paths  = process_sem_annots(coco_val, int_id_val, 
+            val_img_ids, val_prefix, semantic_val_path) 
+   
     # make list of path, and save into training and validation
-    
-    
-    pass
+    # TODO: save: 1)train_img_paths 2) train_gaze_paths, 3) train_sem_paths
+    assert len(train_img_paths) == len(train_sem_paths) and \
+        len(train_sem_paths) == len(train_gaze_paths), \
+        'Lists need to be the same length'
+    print('saving paths to {}'.format(train_aggregate_paths_loc))
+    data_train = {'rgb': train_img_paths, 
+                  'gaze': train_gaze_paths,
+                  'semantic_label': train_sem_paths}
+    df_train = pd.DataFrame(data=data_train)
+    df_train.to_csv(train_aggregate_paths_loc, index=False, 
+                    columns=['rgb', 'gaze', 'semantic_label'])
+    print('Done.')
+
+    # TODO: save: 1) val_img_paths 2) val_gaze_paths, 3) val_sem_paths
+    assert len(val_img_paths) == len(val_sem_paths) and \
+        len(val_sem_paths) == len(val_gaze_paths), \
+        'Lists need to be the same length'
+    print('saving paths to {}'.format(val_aggregate_paths_loc))
+    data_val = {'rgb': val_img_paths, 
+                  'gaze': val_gaze_paths,
+                  'semantic_label': val_sem_paths}
+    df_val = pd.DataFrame(data=data_val)
+    df_val.to_csv(val_aggregate_paths_loc, index=False, 
+                    columns=['rgb', 'gaze', 'semantic_label'])
+    print('Done.')
+
