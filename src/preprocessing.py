@@ -44,9 +44,9 @@ def process_sem_annots(coco, imgids, str_imgids, file_prefix, save_dir_path):
         label_masks = [element[0]* element[1] for element in masks]
         # overlay on 0's
         canvas = np.zeros(dims)
-        for i in range(len(label_masks)):
+        for j in range(len(label_masks)):
             # check for duplicates
-            this_mask = label_masks[i].copy()
+            this_mask = label_masks[j].copy()
             this_mask[np.where(canvas != 0)] = 0
             canvas = canvas + this_mask
         # saving 
