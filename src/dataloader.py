@@ -34,6 +34,7 @@ class SalconDataloader(object):
         self.gt_type = gt_type
         assert self.gt_type == 'pix' or self.gt_type == 'bbox'
         self.verbose = verbose
+        self.train = train
 
         self.random_draw = random_draw
         if not train:
