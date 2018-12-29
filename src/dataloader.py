@@ -83,9 +83,16 @@ class SalconDataloader(object):
         # creating name -- .[train/val]_[alphabetized classes]_indices.npy
         # under directory ../directory
         if self.train:
-            filename = '.train_'+'_'.join(sorted(self.classes))+'indices.npy'
+            filename = '.train_'+\
+                        '+'.join(['_'.join(element.split(' ')) \
+                                for element in sorted(self.classes)])+\
+                        '_indices.npy'
         else:
-            filename = '.val_'+'_'.join(sorted(self.classes))+'indices.npy'
+            filename = '.val_'+\
+                        '+'.join(['_'.join(element.split(' ')) \
+                                for element in sorted(self.classes)])+\
+                        '_indices.npy'
+
         path = os.path.join(os.path.dirname(self.data_path_csv),
                                 filename)
 
