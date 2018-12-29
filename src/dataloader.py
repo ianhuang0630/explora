@@ -12,7 +12,8 @@ import random
 
 class SalconDataloader(object):
     def __init__(self, data_path_csv, sem_id_csv, gt_type='pix', 
-                 random_draw=True, classes=[], verbose=True):
+                 random_draw=True, classes=[], train=True, read_cache=True, 
+                 verbose=True):
         """ Constructor for the Salcon dataset
         Input:
             data_path_csv (str): csv with path to training instances
@@ -22,6 +23,10 @@ class SalconDataloader(object):
                 random, false if it goes down the list.
             classes (optional, list): list of classes that will be extracted
                 from the dataset.
+            train (optional, bool): True if dataloader is used for training
+            read_cache (optional, bool): True if the indices for a certain 
+                set of classes is to be read from memory. False if the indices
+                must be recomputed and resaved.
             verbose (optional, bool): True if verbose, false otherwise.
         """
         self.data_path_csv = data_path_csv
@@ -31,6 +36,9 @@ class SalconDataloader(object):
         self.verbose = verbose
 
         self.random_draw = random_draw
+        if not train:
+            assert not self.random_draw, 'random draw not supported for evaluation'
+
         self.classes = classes
         # making label2id sem2id 
         if self.verbose:
@@ -62,7 +70,7 @@ class SalconDataloader(object):
     def get_class2id_conv(self, class_str):
         return self.sem2id[class_str] 
 
-    def set_desired_labels(self):
+    def set_desired_labels(self, new_classes):
         pass
     
     def filter_by_classes(self):
@@ -72,25 +80,41 @@ class SalconDataloader(object):
                             conditions hold.
         """
         # if less than all categories are in target_id's:
+        # creating name -- .[train/val]_[alphabetized classes]_indices.npy
+        # under directory ../directory
+        if self.train:
+            filename = '.train_'+'_'.join(sorted(self.classes))+'indices.npy'
+        else:
+            filename = '.val_'+'_'.join(sorted(self.classes))+'indices.npy'
+        path = os.path.join(os.path.dirname(self.data_path_csv),
+                                filename)
+
         if len(self.focus_ids) < len(self.sem2id):
-            indices = [] 
-            for index, row in tqdm(self.data_path.iterrows()):
-                path = row['semantic_label']
-                assert os.path.exists(path), \
-                    'sematic_label path {} does not exist'.format(path)
-                assert '.pkl' in path, 'Expected {} to be a pkl file'.format(path)
-                
-                with open(path, 'rb') as f:
-                    labels = pickle.load(f)
-                    if any([element in labels.flatten() for element in \
-                            list(self.focus_ids)]):
-                        # save index
-                        indices.append(index)
-            # TODO save indices at a given location
-        
-        else: # all categories are kept
+            if self.read_cache and os.path.exists(path):
+                if self.verbose:
+                    print('reading {}'.format(path)) 
+                indices = np.load(path).tolist()
+            else: # create and save indices 
+                indices = [] 
+                for index, row in tqdm(self.data_path.iterrows()):
+                    path = row['semantic_label']
+                    # some checks
+                    assert os.path.exists(path), \
+                        'semantic_label path {} does not exist'.format(path)
+                    assert '.pkl' in path, 'Expected {} to be a pkl file'.\
+                            format(path)
+                    # checking if desired labels are in current dataset 
+                    with open(path, 'rb') as f:
+                        labels = pickle.load(f)
+                        if any([element in labels.flatten() for element in \
+                                list(self.focus_ids)]):
+                            # save index
+                            indices.append(index)
+                # save indices at a given location
+                np.save(path, np.array(indices))
+
+        else: # all categories are kept, and no need to be saved
             indices = list(range(len(self.data_path)))
-            
         return indices 
 
     def __iter__(self):
