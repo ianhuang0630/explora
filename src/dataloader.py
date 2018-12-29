@@ -15,11 +15,9 @@ class SalconDataloader(object):
                  random_draw=True, classes=[], verbose=True):
         """ Constructor for the Salcon dataset
         Input:
-            rgb_csv (str): path to rgb data csv
-            sal_csv (str): path to saliency map csv
-            sem_csv (str): path to semantic labeling csv
+            data_path_csv (str): csv with path to training instances
             sem_id_csv (str): path to semantic metadata csv
-            gt_type (str): ground truth type
+            gt_type (optional, str): ground truth type
             random_draw (optional, bool): true if the draw of every sample is
                 random, false if it goes down the list.
             classes (optional, list): list of classes that will be extracted
@@ -47,7 +45,7 @@ class SalconDataloader(object):
             self.id2sem[element['id']] = element['name']
         assert all([element in self.sem2id for element in self.classes]),\
                 'Elements of self.classes needs to be {}'.\
-                format(list(self.sem2id.values()))
+                format(list(self.sem2id.keys()))
         # conversion from self.classes to id's
         self.focus_ids = set([self.sem2id[element] for element in self.classes])
         if len(self.focus_ids) == 0: # if empty:
@@ -59,9 +57,10 @@ class SalconDataloader(object):
         self.available_indices = self.filter_by_classes()
    
     def get_id2class_conv(self, id_num):
-        pass 
+        return self.id2sem[id_num]
+
     def get_class2id_conv(self, class_str):
-        pass
+        return self.sem2id[class_str] 
 
     def set_desired_labels(self):
         pass
