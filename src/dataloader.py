@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pickle # for loading semantic labels
 from tqdm import tqdm
+import random
 
 class SalconDataloader(object):
     def __init__(self, data_path_csv, sem_id_csv, gt_type='pix', 
