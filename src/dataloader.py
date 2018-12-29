@@ -85,24 +85,24 @@ class SalconDataloader(object):
         # creating name -- .[train/val]_[alphabetized classes]_indices.npy
         # under directory ../directory
         if self.train:
-            filename = '.train_'+\
+            filename = 'train_'+\
                         '+'.join(['_'.join(element.split(' ')) \
                                 for element in sorted(self.classes)])+\
                         '_indices.npy'
         else:
-            filename = '.val_'+\
+            filename = 'val_'+\
                         '+'.join(['_'.join(element.split(' ')) \
                                 for element in sorted(self.classes)])+\
                         '_indices.npy'
 
-        path = os.path.join(os.path.dirname(self.data_path_csv),
+        save_path = os.path.join(os.path.dirname(self.data_path_csv),
                                 filename)
 
         if len(self.focus_ids) < len(self.sem2id):
-            if self.read_cache and os.path.exists(path):
+            if self.read_cache and os.path.exists(save_path):
                 if self.verbose:
-                    print('reading {}'.format(path)) 
-                indices = np.load(path).tolist()
+                    print('reading {}'.format(save_path)) 
+                indices = np.load(save_path).tolist()
             else: # create and save indices 
                 indices = [] 
                 for index, row in tqdm(self.data_path.iterrows()):
@@ -120,7 +120,9 @@ class SalconDataloader(object):
                             # save index
                             indices.append(index)
                 # save indices at a given location
-                np.save(path, np.array(indices))
+                print('saving to cache file {}'.format(save_path))
+                np.save(save_path, np.array(indices))
+                print('saved.')
 
         else: # all categories are kept, and no need to be saved
             indices = list(range(len(self.data_path)))
