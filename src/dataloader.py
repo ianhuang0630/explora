@@ -108,11 +108,11 @@ class SalconDataloader(object):
         if self.random_draw:
             # reset read_index as a random number in [0, length-1]
             self.read_index = random.randint(0, len(self.available_indices)-1)
-            prod = self.data_path.iloc(self.available_indices[self.read_index])
+            prod = self.data_path.iloc[self.available_indices[self.read_index]]
         else:
             #increment read_index
             if self.read_index <= len(self.available_indices)-1:
-                prod = self.data_path.iloc(self.available_indices[self.read_index])
+                prod = self.data_path.iloc[self.available_indices[self.read_index]]
                 self.read_index += 1
             else:
                 raise StopIteration
