@@ -123,10 +123,10 @@ class SalconDataloader(object):
             sem_label = pickle.load(f)
         
         # zeroing out the classes not in the selected classes 
-        sem_label_masked = np.zeros_like(sem_label)
+        target = np.zeros_like(sem_label)
         for cat in list(self.focus_ids):
             vert, horiz = np.where(sem_label == cat)
-            sem_label_masked[vert, horiz] = cat
+            target[vert, horiz] = cat
         
         if self.gt_type == 'bbox':
             # TODO: yet to be implemented
