@@ -8,12 +8,13 @@ import numpy as np
 import pandas as pd
 import pickle # for loading semantic labels
 from tqdm import tqdm
+from multiprocessing import Pool
 import random
 
 class SalconDataloader(object):
     def __init__(self, data_path_csv, sem_id_csv, gt_type='pix', 
                  random_draw=True, classes=[], train=True, read_cache=True, 
-                 verbose=True):
+                 batch_size=1, verbose=True):
         """ Constructor for the Salcon dataset
         Input:
             data_path_csv (str): csv with path to training instances
@@ -27,6 +28,7 @@ class SalconDataloader(object):
             read_cache (optional, bool): True if the indices for a certain 
                 set of classes is to be read from memory. False if the indices
                 must be recomputed and resaved.
+            batch_size (optional, int): batch size
             verbose (optional, bool): True if verbose, false otherwise.
         """
         self.data_path_csv = data_path_csv
@@ -36,6 +38,7 @@ class SalconDataloader(object):
         self.verbose = verbose
         self.train = train
         self.read_cache = read_cache
+        self.batch_size = batch_size 
 
         self.random_draw = random_draw
         if not train:
@@ -57,13 +60,18 @@ class SalconDataloader(object):
                 'Elements of self.classes needs to be {}'.\
                 format(list(self.sem2id.keys()))
         # conversion from self.classes to id's
+        if self.verbose:
+            print('getting focus classes ids...')
         self.focus_ids = set([self.sem2id[element] for element in self.classes])
         if len(self.focus_ids) == 0: # if empty:
             self.focus_ids = set(list(self.sem2id.values())) # include everything
-        
+        if self.verbose:
+            print('loading data path csv...')
         # reading csv
         self.data_path = pd.read_csv(self.data_path_csv)
         # preprocess the classes to hold only required classes
+        if self.verbose:
+            print('Constructing list of indices in csv satisfying class requirements...')
         self.available_indices = self.filter_by_classes()
    
     def get_id2class_conv(self, id_num):
@@ -120,9 +128,11 @@ class SalconDataloader(object):
                             # save index
                             indices.append(index)
                 # save indices at a given location
-                print('saving to cache file {}'.format(save_path))
+                if self.verbose:
+                    print('saving to cache file {}'.format(save_path))
                 np.save(save_path, np.array(indices))
-                print('saved.')
+                if self.verbose:
+                    print('saved.')
 
         else: # all categories are kept, and no need to be saved
             indices = list(range(len(self.data_path)))
@@ -139,35 +149,41 @@ class SalconDataloader(object):
         """ gets a random sample if self.random=True, or ordered down the list 
             if False
         """
+        batch = []
+
         if self.random_draw:
             # reset read_index as a random number in [0, length-1]
-            self.read_index = random.randint(0, len(self.available_indices)-1)
-            prod = self.data_path.iloc[self.available_indices[self.read_index]]
+            self.read_index = random.sample(range(len(self.available_indices)-1),
+                                            self.batch_size)
+            prod = self.data_path.iloc[[self.available_indices[element] for element in self.read_index]]
         else:
             #increment read_index
-            if self.read_index <= len(self.available_indices)-1:
-                prod = self.data_path.iloc[self.available_indices[self.read_index]]
-                self.read_index += 1
+            if self.read_index + self.batch_size - 1 <= len(self.available_indices)-1:
+                read_ind_seq = range(self.read_index, self.read_index + self.batch_size)
+                prod = self.data_path.iloc[[self.available_indices[element] for element in read_ind_seq]]
+                self.read_index += self.batch_size
             else:
                 raise StopIteration
-
-        rgb = imread(prod['rgb'])
-        gaze = imread(prod['gaze'])
-        with open(prod['semantic_label'], 'rb') as f:
-            sem_label = pickle.load(f)
         
-        # zeroing out the classes not in the selected classes 
-        target = np.zeros_like(sem_label)
-        for cat in list(self.focus_ids):
-            vert, horiz = np.where(sem_label == cat)
-            target[vert, horiz] = cat
+        for idx, element in prod.iterrows():
+            rgb = imread(element['rgb'])
+            gaze = imread(element['gaze'])
+            with open(element['semantic_label'], 'rb') as f:
+                sem_label = pickle.load(f)
+            
+            # zeroing out the classes not in the selected classes 
+            target = np.zeros_like(sem_label)
+            for cat in list(self.focus_ids):
+                vert, horiz = np.where(sem_label == cat)
+                target[vert, horiz] = cat
+            
+            if self.gt_type == 'bbox':
+                # TODO: yet to be implemented
+                pass
         
-        if self.gt_type == 'bbox':
-            # TODO: yet to be implemented
-            pass
-    
-        return (rgb, gaze, target)
-
+            batch.append((rgb, gaze, target))
+        
+        return batch
 
 
 if __name__=='__main__':
