@@ -23,13 +23,13 @@ def trainNSNet():
                             verbose=True)
     sal_loader = Dataloader(sal_data, batch_size=FLAGS.batch_size, shuffle=True, 
                             num_workers=FLAGS.num_cpus)
-    # TODO: define loss function and optimizer
-    criterion = loss
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-    
     # define the model
     model = FCN16s(n_class = FLAGS.num_classes)
 
+    # TODO: define loss function and optimizer
+    criterion = loss.cross_entropy2d
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    
     # define training sequence
     for epoch in range(FLAGS.num_epochs):
         running_loss = 0.0
