@@ -131,7 +131,7 @@ class SalconDataset(Dataset):
             indices = list(range(len(self.data_path)))
         return indices 
     
-    def __len_(self):
+    def __len__(self):
         return len(self.data_path)
     
     def __getitem__(self, idx):
