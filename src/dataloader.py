@@ -136,9 +136,9 @@ class SalconDataset(Dataset):
     
     def __getitem__(self, idx):
         prod = self.data_path.iloc[idx]
-        rgb = imread(element['rgb'])
-        gaze = imread(element['gaze'])
-        with open(element['semantic_label'], 'rb') as f:
+        rgb = imread(prod['rgb'])
+        gaze = imread(prod['gaze'])
+        with open(prod['semantic_label'], 'rb') as f:
             sem_label = pickle.load(f)
         
         # zeroing out the classes not in the selected classes 
