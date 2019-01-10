@@ -10,14 +10,14 @@ import pickle # for loading semantic labels
 from tqdm import tqdm
 from multiprocessing import Pool
 import random
-from torch.utils.data import Dataset, Dataloader
+from torch.utils.data import Dataset 
 
 class SalconDataset(Dataset):
     """This is a Dataset object that needs to passed through Dataloader with
     an appropriately specified batchsize, shuffle/no shuffle ...etc
     """
     def __init__(self, data_path_csv, sem_id_csv, train=True, transform=None, 
-                 gt_type='pix', classes=[], , read_cache=True, verbose=True):
+                 gt_type='pix', classes=[], read_cache=True, verbose=True):
         """ Initializer for the Salcon dataset
         Input:
             data_path_csv (str): csv with path to training instances
