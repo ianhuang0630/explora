@@ -46,7 +46,7 @@ scipy==1.2.0
 scp==0.13.0
 six==1.12.0
 tensorboard==1.12.1
-tensorflow==1.12.0
+tensorflow==2.7.2
 termcolor==1.1.0
 toolz==0.9.0
 torch==1.0.0
